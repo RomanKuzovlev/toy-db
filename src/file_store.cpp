@@ -2,7 +2,45 @@
 #include <vector>
 #include <fstream>
 #include <utility>
-#include <kv/file_store.hpp>
+#include "kv/file_store.hpp"
+
+namespace {
+
+std::string trimLeft(const std::string& text) {
+    std::size_t start = text.find_first_not_of(' ');
+    if (start == std::string::npos) {
+        return "";
+    }
+    return text.substr(start);
+}
+
+bool splitFirstWord(const std::string& text, std::string& first, std::string& rest) {
+    std::string cleaned = trimLeft(text);
+
+    if (cleaned.empty()) {
+        first = "";
+        rest = "";
+        return false;
+    }
+
+    std::size_t spacePos = cleaned.find(' ');
+
+    if (spacePos == std::string::npos) {
+        first = cleaned;
+        rest = "";
+        return true;
+    }
+
+    first = cleaned.substr(0, spacePos);
+    rest = trimLeft(cleaned.substr(spacePos + 1));
+    return true;
+}   
+
+} // namespace
+
+kv::FileStore::FileStore(std::string file_path)
+    : file_path_(std::move(file_path)) {
+}
 
 kv::Status kv::FileStore::set(std::string_view key, std::string_view value) {
     std::ifstream in(this->file_path_);
@@ -134,33 +172,3 @@ kv::Status kv::FileStore::remove(std::string_view key) {
 
     return kv::Status{};
 }
-
-std::string trimLeft(const std::string& text) {
-    std::size_t start = text.find_first_not_of(' ');
-    if (start == std::string::npos) {
-        return "";
-    }
-    return text.substr(start);
-}
-
-bool splitFirstWord(const std::string& text, std::string& first, std::string& rest) {
-    std::string cleaned = trimLeft(text);
-
-    if (cleaned.empty()) {
-        first = "";
-        rest = "";
-        return false;
-    }
-
-    std::size_t spacePos = cleaned.find(' ');
-
-    if (spacePos == std::string::npos) {
-        first = cleaned;
-        rest = "";
-        return true;
-    }
-
-    first = cleaned.substr(0, spacePos);
-    rest = trimLeft(cleaned.substr(spacePos + 1));
-    return true;
-}   
