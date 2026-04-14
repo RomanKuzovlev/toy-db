@@ -52,7 +52,7 @@ void showFile(const std::string& db_path) {
 } // namespace
 
 int main() {
-    const std::string db_path = "db.txt";
+    const std::string db_path = "kv_db";
 
     // Ensure the DB file exists before FileStore starts using it.
     std::ofstream ensure_file(db_path, std::ios::app);
