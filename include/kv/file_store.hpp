@@ -2,6 +2,8 @@
 
 #include <string>
 #include <string_view>
+#include <unordered_map>
+
 #include "kv/store.hpp"
 
 namespace kv {
@@ -18,7 +20,11 @@ public:
     [[nodiscard]] Status remove(std::string_view key) override;
 
 private:
+    [[nodiscard]] bool ready() const noexcept;
+
     std::string file_path_;
+    std::unordered_map<std::string, std::string> entries_;
+    Status init_status_ {};
 };
 
 
