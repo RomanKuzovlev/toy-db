@@ -32,6 +32,7 @@ namespace kv
             SlotState state = SlotState::empty;
             std::string key;
             std::string value;
+            std::size_t hash = 0;
         };
 
         std::vector<Slot> slots_;
@@ -55,7 +56,8 @@ namespace kv
             return false;
         }
 
-        std::size_t index = std::hash<std::string_view>{}(key) % slots_.size();
+        std::size_t hash = std::hash<std::string_view>{}(key);
+        std::size_t index = hash % slots_.size();
 
         for (std::size_t probes = 0; probes < slots_.size(); ++probes)
         {
@@ -66,11 +68,12 @@ namespace kv
                 slot.state = SlotState::occupied;
                 slot.key = key;
                 slot.value = value;
+                slot.hash = hash;
                 ++size_;
                 return true;
             }
 
-            if (slot.key == key)
+            if (slot.hash == hash && slot.key == key)
             {
                 slot.value = value;
                 return true;
@@ -84,7 +87,32 @@ namespace kv
 
     const std::string *HashMap::get(std::string_view key) const
     {
-        // impl
+        if (slots_.empty())
+        {
+            return nullptr;
+        }
+
+        std::size_t hash = std::hash<std::string_view>{}(key);
+        std::size_t index = hash % slots_.size();
+
+        for (std::size_t probes = 0; probes < slots_.size(); ++probes)
+        {
+            const Slot &slot = slots_[index];
+
+            if (slot.state == SlotState::empty)
+            {
+                return nullptr;
+            }
+
+            if (slot.hash == hash && slot.key == key)
+            {
+                return &slot.value;
+            }
+
+            index = (index + 1) % slots_.size();
+        }
+
+        return nullptr;
     }
 
 } // namespace kv
