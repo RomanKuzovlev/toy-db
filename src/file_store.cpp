@@ -1,10 +1,12 @@
+#include <optional>
 #include <utility>
 
 #include "kv/file_store.hpp"
 #include "kv/wal.hpp"
 
 kv::FileStore::FileStore(std::string file_path)
-    : file_path_(std::move(file_path))
+    : file_path_(std::move(file_path)),
+      entries_(65'536)
 {
     init_status_ = rebuildHashTree(file_path_, entries_);
 }
@@ -21,13 +23,27 @@ kv::Status kv::FileStore::set(std::string_view key, std::string_view value)
         return init_status_;
     }
 
+    if (entries_.get(key) == nullptr && entries_.size() == entries_.capacity())
+    {
+        return kv::Status{
+            kv::StoreError::invalid_argument,
+            "Hash map capacity exceeded.\n",
+        };
+    }
+
     const kv::Status status = saveCommand(file_path_, '+', key, value);
     if (!status.ok())
     {
         return status;
     }
 
-    entries_[std::string(key)] = std::string(value);
+    if (!entries_.set(std::string(key), std::string(value)))
+    {
+        return kv::Status{
+            kv::StoreError::invalid_argument,
+            "Hash map capacity exceeded.\n",
+        };
+    }
 
     return kv::Status{};
 }
@@ -38,18 +54,22 @@ kv::GetResult kv::FileStore::get(std::string_view key) const
     {
         return kv::GetResult{
             init_status_,
+            std::nullopt,
         };
     }
 
-    const auto it = entries_.find(std::string(key));
-    if (it == entries_.end())
+    const std::string *value = entries_.get(key);
+    if (value == nullptr)
     {
-        return kv::GetResult{kv::Status{}};
+        return kv::GetResult{
+            kv::Status{},
+            std::nullopt,
+        };
     }
 
     return kv::GetResult{
         kv::Status{},
-        it->second,
+        *value,
     };
 }
 
@@ -66,7 +86,7 @@ kv::Status kv::FileStore::remove(std::string_view key)
         return status;
     }
 
-    entries_.erase(std::string(key));
+    entries_.remove(key);
 
     return kv::Status{};
 }

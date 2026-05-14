@@ -2,8 +2,8 @@
 
 #include <string>
 #include <string_view>
-#include <unordered_map>
 
+#include "kv/entry_map.hpp"
 #include "kv/store.hpp"
 
 namespace kv
@@ -25,7 +25,7 @@ namespace kv
         [[nodiscard]] bool ready() const noexcept;
 
         std::string file_path_;
-        std::unordered_map<std::string, std::string> entries_;
+        EntryMap entries_;
         Status init_status_{};
     };
 

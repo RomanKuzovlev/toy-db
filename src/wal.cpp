@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <string>
+#include <utility>
 
 namespace
 {
@@ -82,7 +83,7 @@ kv::Status kv::saveCommand(const std::string &file_path,
 
 kv::Status kv::rebuildHashTree(
     const std::string &file_path,
-    std::unordered_map<std::string, std::string> &entries)
+    kv::EntryMap &entries)
 {
     std::ifstream in(file_path);
     if (!in)
@@ -126,9 +127,15 @@ kv::Status kv::rebuildHashTree(
                 return invalidWalLine(line_number);
             }
 
-            const std::string key = line.substr(2, key_end - 2);
-            const std::string value = line.substr(key_end + 1);
-            entries[key] = value;
+            std::string key = line.substr(2, key_end - 2);
+            std::string value = line.substr(key_end + 1);
+            if (!entries.set(std::move(key), std::move(value)))
+            {
+                return kv::Status{
+                    kv::StoreError::invalid_argument,
+                    "Hash map capacity exceeded while rebuilding WAL.\n",
+                };
+            }
             continue;
         }
 
@@ -145,7 +152,7 @@ kv::Status kv::rebuildHashTree(
                 return invalidWalLine(line_number);
             }
 
-            entries.erase(key);
+            entries.remove(key);
             continue;
         }
 

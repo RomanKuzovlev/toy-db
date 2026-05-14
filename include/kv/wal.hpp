@@ -2,8 +2,8 @@
 
 #include <string>
 #include <string_view>
-#include <unordered_map>
 
+#include "kv/entry_map.hpp"
 #include "kv/store.hpp"
 
 namespace kv
@@ -16,6 +16,6 @@ namespace kv
 
     [[nodiscard]] Status rebuildHashTree(
         const std::string &file_path,
-        std::unordered_map<std::string, std::string> &entries);
+        EntryMap &entries);
 
 } // namespace kv
