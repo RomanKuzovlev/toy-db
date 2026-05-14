@@ -3,40 +3,48 @@
 #include <fstream>
 #include <string>
 
-namespace {
+namespace
+{
 
-kv::Status invalidWalLine(std::size_t line_number) {
-    return kv::Status{
-        kv::StoreError::corrupt_data,
-        "Invalid WAL record at line " + std::to_string(line_number) + ".\n",
-    };
-}
-
-bool hasLineBreak(std::string_view text) {
-    for (char ch : text) {
-        if (ch == '\n' || ch == '\r') {
-            return true;
-        }
+    kv::Status invalidWalLine(std::size_t line_number)
+    {
+        return kv::Status{
+            kv::StoreError::corrupt_data,
+            "Invalid WAL record at line " + std::to_string(line_number) + ".\n",
+        };
     }
 
-    return false;
-}
+    bool hasLineBreak(std::string_view text)
+    {
+        for (char ch : text)
+        {
+            if (ch == '\n' || ch == '\r')
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
 } // namespace
 
-kv::Status kv::saveCommand(const std::string& file_path,
+kv::Status kv::saveCommand(const std::string &file_path,
                            char command,
                            std::string_view key,
-                           std::string_view value) {
+                           std::string_view value)
+{
     if (key.empty() || key.find(' ') != std::string_view::npos || hasLineBreak(key) ||
-        hasLineBreak(value)) {
+        hasLineBreak(value))
+    {
         return kv::Status{
             kv::StoreError::invalid_argument,
             "Keys cannot contain spaces or line breaks, and values cannot contain line breaks.\n",
         };
     }
 
-    if (command != '+' && command != '-') {
+    if (command != '+' && command != '-')
+    {
         return kv::Status{
             kv::StoreError::invalid_argument,
             "Unknown WAL command.\n",
@@ -44,20 +52,25 @@ kv::Status kv::saveCommand(const std::string& file_path,
     }
 
     std::ofstream out(file_path, std::ios::app);
-    if (!out) {
+    if (!out)
+    {
         return kv::Status{
             kv::StoreError::io_error,
             "Failed to open WAL for appending.\n",
         };
     }
 
-    if (command == '+') {
+    if (command == '+')
+    {
         out << "+ " << key << ' ' << value << '\n';
-    } else {
+    }
+    else
+    {
         out << "- " << key << '\n';
     }
 
-    if (!out) {
+    if (!out)
+    {
         return kv::Status{
             kv::StoreError::io_error,
             "Failed to write WAL command.\n",
@@ -68,12 +81,15 @@ kv::Status kv::saveCommand(const std::string& file_path,
 }
 
 kv::Status kv::rebuildHashTree(
-    const std::string& file_path,
-    std::unordered_map<std::string, std::string>& entries) {
+    const std::string &file_path,
+    std::unordered_map<std::string, std::string> &entries)
+{
     std::ifstream in(file_path);
-    if (!in) {
+    if (!in)
+    {
         std::ofstream create(file_path, std::ios::app);
-        if (!create) {
+        if (!create)
+        {
             return kv::Status{
                 kv::StoreError::io_error,
                 "Failed to create WAL file.\n",
@@ -88,20 +104,25 @@ kv::Status kv::rebuildHashTree(
 
     std::string line;
     std::size_t line_number = 0;
-    while (std::getline(in, line)) {
+    while (std::getline(in, line))
+    {
         ++line_number;
 
-        if (line.empty()) {
+        if (line.empty())
+        {
             continue;
         }
 
-        if (line.size() < 3 || line[1] != ' ') {
+        if (line.size() < 3 || line[1] != ' ')
+        {
             return invalidWalLine(line_number);
         }
 
-        if (line[0] == '+') {
+        if (line[0] == '+')
+        {
             const std::size_t key_end = line.find(' ', 2);
-            if (key_end == std::string::npos || key_end == 2) {
+            if (key_end == std::string::npos || key_end == 2)
+            {
                 return invalidWalLine(line_number);
             }
 
@@ -111,13 +132,16 @@ kv::Status kv::rebuildHashTree(
             continue;
         }
 
-        if (line[0] == '-') {
-            if (line.find(' ', 2) != std::string::npos) {
+        if (line[0] == '-')
+        {
+            if (line.find(' ', 2) != std::string::npos)
+            {
                 return invalidWalLine(line_number);
             }
 
             const std::string key = line.substr(2);
-            if (key.empty()) {
+            if (key.empty())
+            {
                 return invalidWalLine(line_number);
             }
 
@@ -128,7 +152,8 @@ kv::Status kv::rebuildHashTree(
         return invalidWalLine(line_number);
     }
 
-    if (!in.eof()) {
+    if (!in.eof())
+    {
         return kv::Status{
             kv::StoreError::io_error,
             "Failed while reading WAL file.\n",
